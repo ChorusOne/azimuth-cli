@@ -49,6 +49,13 @@ exports.handler = async function (argv)
     let txHex = txBytes.toString('hex');
     let filePath = files.writeFile(workDir, `${nonce}-${patp}.txn`, txHex);
     console.log(`Wrote spawn transaction for ${patp} to ${filePath} .`);
+    let jsonPath = files.writeFile(workDir, `${nonce}-${patp}.json`, {
+      "jsonrpc": "2.0",
+      "id": nonce,
+      "method": "eth_sendRawTransaction",
+      "params": [`0x${txHex}`]
+    });
+    console.log(`Wrote JSON-RPC request data for ${patp} to ${jsonPath} .`);
   } //end for each point
   
   //with web3, sometimes the not all promises complete which keeps the process hanging
