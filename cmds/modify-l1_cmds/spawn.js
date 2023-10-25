@@ -26,6 +26,9 @@ exports.handler = async function (argv)
     // so, the best way of spawning is to spwan to an address with eth (usually the same as the ownership of the parent or spawn proxy of parent), so more things can be set, such as the netork key.
   const targetAddress = validate.address(argv.address, true);
 
+  // This gets the current transaction count i.e. the last used nonce, so we need to increment before use every time.
+  var nonce = ctx.web3.eth.getTransactionCount(ethAccount.address, "latest");
+
   console.log(`Will spawn ${points.length} points`);
   for (const p of points) 
   {
@@ -40,7 +43,12 @@ exports.handler = async function (argv)
 
     //create and send tx
     let tx = ajs.ecliptic.spawn(ctx.contracts, p, targetAddress);
-    await eth.setGasSignSendAndSaveTransaction(ctx, tx, privateKey, argv, workDir, patp, 'spawn');
+    let tx.nonce = ++nonce;
+    let txSigned = await eth.setGasAndSignTransaction(ctx, tx, privateKey, argv, workDir, patp, 'spawn');
+    let txBytes = txSigned.serialize();
+    let txHex = txBytes.toString('hex');
+    let filePath = files.writeFile(workDir, `${nonce}-${patp}.txn`, txHex);
+    console.log(`Wrote spawn transaction for ${patp} to ${filePath} .`);
   } //end for each point
   
   //with web3, sometimes the not all promises complete which keeps the process hanging

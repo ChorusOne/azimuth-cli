@@ -173,6 +173,19 @@ async function setGasSignSendAndSaveTransaction(ctx, tx, privateKey, argv, workD
   }
 }
 
+async function setGasAndSignTransaction(ctx, tx, privateKey, argv, workDir, patp, actionName){
+  setGas(tx, argv);
+
+  // from signAndSend
+  let pkBuffer = Buffer.from(pk, 'hex');
+  if(!ajs.utils.isValidPrivate(pkBuffer))
+      throw 'pk is not valid';
+  let txSigned = await ajs.txn.signTransaction(web3, tx, pkBuffer);
+  console.log('signed transaction: ' + txSigned.transactionHash);
+
+  return txSigned;
+}
+
 module.exports = {
   createContext,
   getPrivateKey,
@@ -181,5 +194,6 @@ module.exports = {
   setGas,
   signAndSend,
   waitForTransactionReceipt,
+  setGasAndSignTransaction,
   setGasSignSendAndSaveTransaction
 }
