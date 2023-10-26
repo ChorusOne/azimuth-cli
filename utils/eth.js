@@ -108,11 +108,13 @@ function setGas(tx, argv)
   }
   if(argv.maxFee)
   {
-    tx.maxFeePerGas = Web3.utils.toWei(argv.maxFee, 'gwei'); //in wei
+    console.log("maxFee", argv.maxFee);
+    tx.maxFeePerGas = Web3.utils.toWei(String(argv.maxFee), 'gwei'); //in wei
   }
   if(argv.maxPriorityFee)
   {
-    tx.maxPriorityFeePerGas = Web3.utils.toWei(argv.maxPriorityFee, 'gwei'); //in wei
+    console.log("maxPriorityFee", argv.maxFee);
+    tx.maxPriorityFeePerGas = Web3.utils.toWei(String(argv.maxPriorityFee), 'gwei'); //in wei
   }
 }
 
