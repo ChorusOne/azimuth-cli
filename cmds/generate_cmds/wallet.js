@@ -42,6 +42,10 @@ exports.builder = (yargs) =>{
     default: true,
     type: 'boolean',
   });
+  yargs.option('revision',{
+    describe: 'The revision number of the network key (i.e. how many times it has been reset).',
+    type: 'number'
+  });
 }
 
 exports.handler = async function (argv) 
@@ -85,7 +89,7 @@ exports.handler = async function (argv)
         ticket: masterTicket,
         ship: p,
         boot: argv.generateNetworkKeys,
-        revision: DEFAULT_REVISION
+        revision: argv.revision ? argv.revision : DEFAULT_REVISION
       });
       const file = files.writeFile(workDir, walletFileName, wallet);
       console.log(`Wrote wallet file to: ${file}`);
