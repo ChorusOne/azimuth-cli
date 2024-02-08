@@ -1,7 +1,7 @@
 {
   description = "Command line interface to Azimuth, the Urbit public key infrastructure";
 
-  inputs.nixpkgs.url = "nixpkgs";
+  inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   # The old revision of nixpkgs needed for solc is broken on many other systems
