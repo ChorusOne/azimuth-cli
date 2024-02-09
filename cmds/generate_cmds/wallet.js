@@ -32,6 +32,11 @@ exports.builder = (yargs) =>{
     describe: 'The bit size for all wallets. If not set, will use the standard bit size for each individual point.',
     type: 'number',
   });
+  yargs.option('master-ticket',{
+    describe: 'Specify the master ticket to allow regenerating a previously generated wallet.',
+    type: 'string',
+    conflicts: 'bit-size'
+  });
   yargs.option('generate-network-keys',{
     describe: 'Generate the network keys in the wallet (does not set them on chain).',
     default: true,
@@ -53,6 +58,10 @@ exports.handler = async function (argv)
     console.error('No points provided.');
     process.exit(1);
   }
+  if(argv.masterTicket && points.length > 1){
+    console.error('--master-ticket can only be used with one point at a time');
+    process.exit(1);
+  }
 
   //for each point, generate a master ticket and wallet file if the file doesnt already exists
   console.log(`Will generate HD wallets for ${points.length} points`);
@@ -61,11 +70,14 @@ exports.handler = async function (argv)
     const walletFileName = patp.substring(1)+'-wallet.json';
     if(!files.fileExists(workDir, walletFileName))
     {
-      console.log(`Generating master ticket for ${patp}...`);
-      //There are three default bite sizes for UP8 tickets, 64, 128, and 384, usually corresponding to planets, stars, and galaxies, but this is not required.
-      // If the bite size is provided by the user, we use that one, otherwise we use the size corresponding to the point
-      const bitSize = argv.bitSize ?? getBitSize(p);
-      const masterTicket = await ticket.gen_ticket_more(bitSize);
+      let masterTicket = argv.masterTicket;
+      if(!masterTicket) {
+        console.log(`Generating master ticket for ${patp}...`);
+        //There are three default bite sizes for UP8 tickets, 64, 128, and 384, usually corresponding to planets, stars, and galaxies, but this is not required.
+        // If the bite size is provided by the user, we use that one, otherwise we use the size corresponding to the point
+        const bitSize = argv.bitSize ?? getBitSize(p);
+        masterTicket = await ticket.gen_ticket_more(bitSize);
+      }
       //The wallet is used only for a single point, it contains the master ticket and the name of the point.
       // Optionally, the wallet can also contain the private and public keys that are needed to set the keys in azimuth and generate the Arvo keyfile (boot property). 
       // By default, we generate those keys because they are useful when using the master ticket later for on-chain operations. 
