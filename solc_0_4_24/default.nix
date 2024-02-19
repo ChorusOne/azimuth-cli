@@ -21,6 +21,7 @@ stdenv.mkDerivation {
 
   patches = [
     ./patches/shared-libs-install.patch
+    ./patches/gcc8.patch
   ];
 
   postPatch = ''
