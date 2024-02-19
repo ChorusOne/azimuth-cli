@@ -20,10 +20,12 @@
         oldPkgs = import oldNixpkgs { inherit system; };
         node2nixOutput = import ./default.nix { inherit pkgs system; };
 
+        solc_0_4_24 = oldPkgs.callPackage ./solc_0_4_24 { };
+
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
           buildInputs = [
             pkgs.nodePackages.node-gyp-build
-            oldPkgs.solc
+            solc_0_4_24
           ];
           preRebuild = ''
             ## Fix paths in shebang lines ##
