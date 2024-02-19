@@ -4,29 +4,26 @@
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
+  # Old revision of nixos-unstable to get a specific version (0.4.24)
+  # of the Solidity compiler, required for building azimuth-solidity.
+  inputs.oldNixpkgs.url = "nixpkgs/0bcbb978795bab0f1a45accc211b8b0e349f1cdb";
+  inputs.oldNixpkgs.flake = false;  # The revision is so old that the repo does not contain a flake.nix
+
   # The old revision of nixpkgs needed for solc is broken on many other systems
   inputs.systems.url = "github:nix-systems/x86_64-linux";
   inputs.flake-utils.inputs.systems.follows = "systems";
 
-  outputs = { self, nixpkgs, flake-utils, systems }:
+  outputs = { self, nixpkgs, oldNixpkgs, flake-utils, systems }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        oldPkgs = import oldNixpkgs { inherit system; };
         node2nixOutput = import ./default.nix { inherit pkgs system; };
-
-        # Old revision of nixos-unstable to get a specific version (0.4.24)
-        # of the Solidity compiler, required for building azimuth-solidity.
-        #
-        # This revision is too old to contain a flake.nix so it cannot go in the inputs
-        oldNixpkgsForSolidity = import (builtins.fetchTarball {
-          url = "https://github.com/NixOS/nixpkgs/archive/0bcbb978795bab0f1a45accc211b8b0e349f1cdb.tar.gz";
-          sha256 = "0c3mpc5z7ilgpgr9rhn42vmwhygza6n2yg7lyhgjf0yym4prnxn9";
-        }) { inherit system; };
 
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
           buildInputs = [
             pkgs.nodePackages.node-gyp-build
-            oldNixpkgsForSolidity.solc
+            oldPkgs.solc
           ];
           preRebuild = ''
             ## Fix paths in shebang lines ##
