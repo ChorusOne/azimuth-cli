@@ -6,7 +6,7 @@
 
   # Old revision of nixos-unstable to get a specific version (0.4.24)
   # of the Solidity compiler, required for building azimuth-solidity.
-  inputs.oldNixpkgs.url = "nixpkgs/d00621a67c271e6adb37bf32b5d8b4ce2010325f";
+  inputs.oldNixpkgs.url = "nixpkgs/80d3c080a94b48edb5c0ab647fde31dd58479905";
 
   # The old revision of nixpkgs needed for solc is broken on many other systems
   inputs.systems.url = "github:nix-systems/x86_64-linux";

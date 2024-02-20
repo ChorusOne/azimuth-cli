@@ -22,6 +22,7 @@ stdenv.mkDerivation {
   patches = [
     ./patches/shared-libs-install.patch
     ./patches/gcc8.patch
+    ./patches/gcc11.patch
     ./patches/boost169.patch
     ./patches/boost177.patch
   ];
