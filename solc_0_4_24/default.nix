@@ -23,6 +23,7 @@ stdenv.mkDerivation {
     ./patches/shared-libs-install.patch
     ./patches/gcc8.patch
     ./patches/boost169.patch
+    ./patches/boost177.patch
   ];
 
   postPatch = ''
