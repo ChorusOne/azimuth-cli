@@ -22,6 +22,7 @@ stdenv.mkDerivation {
   patches = [
     ./patches/shared-libs-install.patch
     ./patches/gcc8.patch
+    ./patches/boost169.patch
   ];
 
   postPatch = ''
@@ -44,7 +45,7 @@ stdenv.mkDerivation {
 
   doCheck = stdenv.hostPlatform.isLinux && stdenv.hostPlatform == stdenv.buildPlatform;
   checkPhase = "LD_LIBRARY_PATH=./libsolc:./libsolidity:./liblll:./libevmasm:./libdevcore:$LD_LIBRARY_PATH " +
-               "./test/soltest -p -- --no-ipc --no-smt --testpath ../test";
+               "./test/soltest --show-progress=true -- --no-ipc --no-smt --testpath ../test";
 
   nativeBuildInputs = [ cmake ];
   buildInputs = [ boost z3 ];
