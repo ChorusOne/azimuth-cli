@@ -1,0 +1,18 @@
+commit 4de717637ce21e647cbbb5dffc6c8e82a857232f
+Author: Chris Kerr <ckerr@chorus.one>
+Date:   Wed Feb 21 11:39:48 2024 +0200
+
+    Disable -Werror
+
+diff --git a/cmake/EthCompilerSettings.cmake b/cmake/EthCompilerSettings.cmake
+index 683d1d2e6..cf57ee3dc 100644
+--- a/cmake/EthCompilerSettings.cmake
++++ b/cmake/EthCompilerSettings.cmake
+@@ -34,7 +34,6 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
+ 	# to fix warnings as they arise, so they don't accumulate "to be fixed later".
+ 	add_compile_options(-Wall)
+ 	add_compile_options(-Wextra)
+-	add_compile_options(-Werror)
+ 
+ 	# Disable warnings about unknown pragmas (which is enabled by -Wall).  I assume we have external
+ 	# dependencies (probably Boost) which have some of these.   Whatever the case, we shouldn't be

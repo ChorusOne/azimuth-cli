@@ -25,6 +25,7 @@ stdenv.mkDerivation {
     ./patches/gcc11.patch
     ./patches/boost169.patch
     ./patches/boost177.patch
+    ./patches/disable-Werror.patch
   ];
 
   postPatch = ''
