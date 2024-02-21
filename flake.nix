@@ -4,11 +4,7 @@
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  # The old revision of nixpkgs needed for solc is broken on many other systems
-  inputs.systems.url = "github:nix-systems/x86_64-linux";
-  inputs.flake-utils.inputs.systems.follows = "systems";
-
-  outputs = { self, nixpkgs, flake-utils, systems }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
