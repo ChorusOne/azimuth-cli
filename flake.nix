@@ -4,23 +4,26 @@
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  # Old revision of nixos-unstable to get a specific version (0.4.24)
-  # of the Solidity compiler, required for building azimuth-solidity.
-  inputs.oldNixpkgs.url = "nixpkgs/0bffda19b8af722f8069d09d8b6a24594c80b352";
-
   # The old revision of nixpkgs needed for solc is broken on many other systems
   inputs.systems.url = "github:nix-systems/x86_64-linux";
   inputs.flake-utils.inputs.systems.follows = "systems";
 
-  outputs = { self, nixpkgs, oldNixpkgs, flake-utils, systems }:
+  outputs = { self, nixpkgs, flake-utils, systems }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        oldPkgs = import oldNixpkgs { inherit system; };
         node2nixOutput = import ./default.nix { inherit pkgs system; };
 
-        solc_0_4_24 = oldPkgs.callPackage ./solc_0_4_24 {
-          boost = oldPkgs.boost177;
+        # The Azimuth smart contracts in package azimuth-solidity need a specific version
+        # of the solidity compiler (0.4.24). By default the build tries to download a binary
+        # from the internet, but that is blocked by the Nix sandbox. Instead we install the
+        # compiler as a system package and patch the config to use the system compiler.
+        #
+        # The solc 0.4.24 derivation is taken from an old revision of nixpkgs and modified
+        # to allow it to build with more recent versions of the C compiler and Boost library.
+        # https://github.com/NixOS/nixpkgs/tree/5095e9e32eacfcc794227bfe4fd45d5e60285f73/pkgs/development/compilers/solc
+        solc_0_4_24 = pkgs.callPackage ./solc_0_4_24 {
+          boost = pkgs.boost177;
         };
 
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
