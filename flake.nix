@@ -6,7 +6,7 @@
 
   # Old revision of nixos-unstable to get a specific version (0.4.24)
   # of the Solidity compiler, required for building azimuth-solidity.
-  inputs.oldNixpkgs.url = "nixpkgs/80d3c080a94b48edb5c0ab647fde31dd58479905";
+  inputs.oldNixpkgs.url = "nixpkgs/770cab71da54635e89b587d405f28d87a0fe72bf";
 
   # The old revision of nixpkgs needed for solc is broken on many other systems
   inputs.systems.url = "github:nix-systems/x86_64-linux";
@@ -19,7 +19,9 @@
         oldPkgs = import oldNixpkgs { inherit system; };
         node2nixOutput = import ./default.nix { inherit pkgs system; };
 
-        solc_0_4_24 = oldPkgs.callPackage ./solc_0_4_24 { };
+        solc_0_4_24 = oldPkgs.callPackage ./solc_0_4_24 {
+          boost = oldPkgs.boost177;
+        };
 
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
           buildInputs = [
