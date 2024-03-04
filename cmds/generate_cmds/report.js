@@ -99,8 +99,10 @@ exports.handler = async function (argv)
     switch(argv.outputFormat) {
       case 'azimuth-cli':
         csvLine = `${patp},${p},${shipType},${patpParent},`;
+        break;
       case 'bridge':
         csvLine = `${i},${patp},`;
+        break;
     }
     //see if we have a wallet to get the master from
     let masterTicket = '';
