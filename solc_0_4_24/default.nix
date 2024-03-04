@@ -4,10 +4,10 @@ let
   version = "0.4.24";
   rev = "e67f0147998a9e3835ed3ce8bf6a0a0c634216c5";
   sha256 = "1gy2miv6ia1z98zy6w4y03balwfr964bnvwzyg8v7pn2mayqnaap";
-  jsoncppURL = https://github.com/open-source-parsers/jsoncpp/archive/1.8.4.tar.gz;
+  jsoncppURL = "https://github.com/open-source-parsers/jsoncpp/archive/1.9.3.tar.gz";
   jsoncpp = fetchzip {
     url = jsoncppURL;
-    sha256 = "1z0gj7a6jypkijmpknis04qybs1hkd04d1arr3gy89lnxmp6qzlm";
+    hash = "sha256-mBLBwuIYPonclPyEdFywi7W70WpOqnKEy4q/PECJcO0=";
   };
 in
 stdenv.mkDerivation {
@@ -26,18 +26,13 @@ stdenv.mkDerivation {
     ./patches/boost169.patch
     ./patches/boost177.patch
     ./patches/disable-Werror.patch
+    ./patches/jsoncpp-macos.patch
   ];
 
   postPatch = ''
     touch prerelease.txt
     echo >commit_hash.txt "${rev}"
-    substituteInPlace cmake/jsoncpp.cmake \
-      --replace "${jsoncppURL}" ${jsoncpp}
-
-    # To allow non-standard CMAKE_INSTALL_LIBDIR (fixed in upstream, not yet released)
-    substituteInPlace cmake/jsoncpp.cmake \
-      --replace "\''${CMAKE_INSTALL_LIBDIR}" "lib" \
-      --replace "# Build static lib but suitable to be included in a shared lib." "-DCMAKE_INSTALL_LIBDIR=lib"
+    substituteInPlace cmake/jsoncpp.cmake --replace "${jsoncppURL}" ${jsoncpp}
   '';
 
   cmakeFlags = [
