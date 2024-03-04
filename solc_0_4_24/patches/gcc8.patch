@@ -1,0 +1,50 @@
+commit 9e26f5fa0a956543f14dd84eb9d461ca75cce95e
+Author: Julius Huelsmann <huelsmann@campus.tu-berlin.de>
+Date:   Thu May 17 12:16:28 2018 +0200
+
+    Do not catch exceptions by value in StandardCompiler
+
+diff --git a/libsolidity/interface/StandardCompiler.cpp b/libsolidity/interface/StandardCompiler.cpp
+index ee9b14406..c8d43e9f6 100644
+--- a/libsolidity/interface/StandardCompiler.cpp
++++ b/libsolidity/interface/StandardCompiler.cpp
+@@ -117,7 +117,7 @@ bool hashMatchesContent(string const& _hash, string const& _content)
+ 	{
+ 		return dev::h256(_hash) == dev::keccak256(_content);
+ 	}
+-	catch (dev::BadHexCharacter)
++	catch (dev::BadHexCharacter const&)
+ 	{
+ 		return false;
+ 	}
+@@ -366,7 +366,7 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
+ 				// @TODO use libraries only for the given source
+ 				libraries[library] = h160(address);
+ 			}
+-			catch (dev::BadHexCharacter)
++			catch (dev::BadHexCharacter const&)
+ 			{
+ 				return formatFatalError(
+ 					"JSONError",
+
+commit 1d3a37faff9a82a5269c3414a2d6fe868593afb1
+Author: Julius Huelsmann <huelsmann@campus.tu-berlin.de>
+Date:   Thu May 17 12:19:29 2018 +0200
+
+    Avoid "unneccesary parentheses in declaration of" warning with keeping a temporary variable.
+
+diff --git a/libsolidity/inlineasm/AsmParser.cpp b/libsolidity/inlineasm/AsmParser.cpp
+index d3b0808b4..d300f8fba 100644
+--- a/libsolidity/inlineasm/AsmParser.cpp
++++ b/libsolidity/inlineasm/AsmParser.cpp
+@@ -606,7 +606,9 @@ bool Parser::isValidNumberLiteral(string const& _literal)
+ {
+ 	try
+ 	{
+-		u256(_literal);
++		// Try to convert _literal to u256.
++		auto tmp = u256(_literal);
++		(void) tmp;
+ 	}
+ 	catch (...)
+ 	{
