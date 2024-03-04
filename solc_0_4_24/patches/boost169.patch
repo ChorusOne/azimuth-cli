@@ -1,0 +1,69 @@
+commit d3c3fd20796dd18b7213938bd0ce89e8aeb9d6f3
+Author: Alex Beregszaszi <alex@rtfs.hu>
+Date:   Wed Aug 8 20:46:28 2018 +0100
+
+    Use dev::toString() in Assembly instead of misusing string{} for u256
+
+diff --git a/libevmasm/Assembly.cpp b/libevmasm/Assembly.cpp
+index b71bc80cb..28ae95777 100644
+--- a/libevmasm/Assembly.cpp
++++ b/libevmasm/Assembly.cpp
+@@ -264,7 +264,7 @@ Json::Value Assembly::assemblyJSON(StringMap const& _sourceCodes) const
+ 					createJsonValue("PUSH [ErrorTag]", i.location().start, i.location().end, ""));
+ 			else
+ 				collection.append(
+-					createJsonValue("PUSH [tag]", i.location().start, i.location().end, string(i.data())));
++					createJsonValue("PUSH [tag]", i.location().start, i.location().end, dev::toString(i.data())));
+ 			break;
+ 		case PushSub:
+ 			collection.append(
+@@ -290,7 +290,7 @@ Json::Value Assembly::assemblyJSON(StringMap const& _sourceCodes) const
+ 			break;
+ 		case Tag:
+ 			collection.append(
+-				createJsonValue("tag", i.location().start, i.location().end, string(i.data())));
++				createJsonValue("tag", i.location().start, i.location().end, dev::toString(i.data())));
+ 			collection.append(
+ 				createJsonValue("JUMPDEST", i.location().start, i.location().end));
+ 			break;
+
+commit 55d91d5f9cdc176c771b6038948d5dacba383e34
+Author: Bhargava Shastry <bshastry@sect.tu-berlin.de>
+Date:   Mon Oct 15 17:14:22 2018 +0200
+
+    Bug fix: Add missing include in test/Options.h; otherwise compiler does not recognise the boost object that Options subclasses
+
+diff --git a/test/Options.h b/test/Options.h
+index 9bc698762..cbaa0dd1a 100644
+--- a/test/Options.h
++++ b/test/Options.h
+@@ -24,7 +24,7 @@
+ #include <boost/test/unit_test.hpp>
+ #include <boost/filesystem.hpp>
+ #include <boost/version.hpp>
+-
++#include <boost/core/noncopyable.hpp>
+ #include <functional>
+ 
+ namespace dev
+
+commit 3d4e5f30e1696bee8482058b5ec4adb51f9f1387
+Author: chriseth <chris@ethereum.org>
+Date:   Mon Oct 15 18:08:41 2018 +0200
+
+    Correct include path
+
+diff --git a/test/Options.h b/test/Options.h
+index cbaa0dd1a..0e8a51dad 100644
+--- a/test/Options.h
++++ b/test/Options.h
+@@ -24,7 +24,8 @@
+ #include <boost/test/unit_test.hpp>
+ #include <boost/filesystem.hpp>
+ #include <boost/version.hpp>
+-#include <boost/core/noncopyable.hpp>
++#include <boost/noncopyable.hpp>
++
+ #include <functional>
+ 
+ namespace dev

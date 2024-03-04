@@ -4,29 +4,28 @@
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  # The old revision of nixpkgs needed for solc is broken on many other systems
-  inputs.systems.url = "github:nix-systems/x86_64-linux";
-  inputs.flake-utils.inputs.systems.follows = "systems";
-
-  outputs = { self, nixpkgs, flake-utils, systems }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
         node2nixOutput = import ./default.nix { inherit pkgs system; };
 
-        # Old revision of nixos-unstable to get a specific version (0.4.24)
-        # of the Solidity compiler, required for building azimuth-solidity.
+        # The Azimuth smart contracts in package azimuth-solidity need a specific version
+        # of the solidity compiler (0.4.24). By default the build tries to download a binary
+        # from the internet, but that is blocked by the Nix sandbox. Instead we install the
+        # compiler as a system package and patch the config to use the system compiler.
         #
-        # This revision is too old to contain a flake.nix so it cannot go in the inputs
-        oldNixpkgsForSolidity = import (builtins.fetchTarball {
-          url = "https://github.com/NixOS/nixpkgs/archive/0bcbb978795bab0f1a45accc211b8b0e349f1cdb.tar.gz";
-          sha256 = "0c3mpc5z7ilgpgr9rhn42vmwhygza6n2yg7lyhgjf0yym4prnxn9";
-        }) { inherit system; };
+        # The solc 0.4.24 derivation is taken from an old revision of nixpkgs and modified
+        # to allow it to build with more recent versions of the C compiler and Boost library.
+        # https://github.com/NixOS/nixpkgs/tree/5095e9e32eacfcc794227bfe4fd45d5e60285f73/pkgs/development/compilers/solc
+        solc_0_4_24 = pkgs.callPackage ./solc_0_4_24 {
+          boost = pkgs.boost177;
+        };
 
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
           buildInputs = [
             pkgs.nodePackages.node-gyp-build
-            oldNixpkgsForSolidity.solc
+            solc_0_4_24
           ];
           preRebuild = ''
             ## Fix paths in shebang lines ##
