@@ -32,6 +32,10 @@ exports.builder = (yargs) =>{
     if (!argv.pointsFile && !argv.points && !argv.useWalletFiles) throw new Error('You must provide either --points-file, --points, or --use-wallet-files')
     return true
   });
+  yargs.option('revision',{
+    describe: 'The revision number of the network key (i.e. how many times it has been reset).',
+    type: 'number'
+  });
 }
 
 exports.handler = async function (argv) 
@@ -46,7 +50,7 @@ exports.handler = async function (argv)
     const patp = ob.patp(p);
 
     let networkKeyPair = null;
-    let revision = DEFAULT_REVISION; //TODO: support bumping the revision (by looking it up on-chain)
+    let revision = argv.revision ? argv.revision : DEFAULT_REVISION; //TODO: support bumping the revision (by looking it up on-chain)
 
     //see if we have a wallet to get the network keys from
     let wallet = argv.useWalletFiles ? wallets[patp] : null;
@@ -86,7 +90,7 @@ exports.handler = async function (argv)
     var networkKeyfileName = `${patp.substring(1)}-${revision}.key`;
     if(!files.fileExists(workDir, networkKeyfileName))
     {
-      var networkKeyfileContents = kg.generateKeyfile(networkKeyPair, p, DEFAULT_REVISION);
+      var networkKeyfileContents = kg.generateKeyfile(networkKeyPair, p, revision);
       const file = files.writeFile(workDir, networkKeyfileName, networkKeyfileContents);
       console.log(`Wrote network keyfile to: ${file}`);
     }

@@ -42,6 +42,10 @@ exports.builder = (yargs) =>{
     if (!argv.pointsFile && !argv.points && !argv.useWalletFiles) throw new Error('You must provide either --points-file, --points, or --use-wallet-files')
     return true
   });
+  yargs.option('revision',{
+    describe: 'The revision number of the network key (i.e. how many times it has been reset).',
+    type: 'number'
+  });
 
   yargs.option('use-roller',{
     describe: 'Enforce using the roller (L2) for all data and do not allow fallback to azimuth (L1).',
@@ -112,7 +116,8 @@ exports.handler = async function (argv)
     }
     //see if there is a network keyfile
     let networkKeyfileContents = '';
-    const networkKeyfileName = `${patp.substring(1)}-${DEFAULT_REVISION}.key`;
+    let revision = argv.revision ? argv.revision : DEFAULT_REVISION;
+    const networkKeyfileName = `${patp.substring(1)}-${revision}.key`;
     if(files.fileExists(workDir, networkKeyfileName))
     {
       networkKeyfileContents = files.readLines(workDir, networkKeyfileName)[0];
