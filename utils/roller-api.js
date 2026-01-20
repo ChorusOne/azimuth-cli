@@ -231,7 +231,7 @@ async function setManagementProxy(client, point, managementProxyAddress, signing
   const patp = ob.patp(validate.point(point, true));
   const targetAddress = validate.address(managementProxyAddress, true);
   const signingAddressValid = validate.address(signingAddress, true);
-  const proxy = "own"; //only the owner can set the management proxy
+  const proxy = await getManagementProxyType(client, patp, signingAddress); //either the owner or the management proxy can set the management proxy
 
   let params = {
     address: signingAddressValid,
