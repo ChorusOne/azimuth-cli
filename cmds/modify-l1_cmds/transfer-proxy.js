@@ -34,7 +34,7 @@ exports.handler = async function (argv)
       null; //fail
     targetAddress = validate.address(targetAddress, true);
 
-    if(await azimuth.isTransferProxy(ctx.contracts, p, targetAddress)){
+    if(await ajs.azimuth.isTransferProxy(ctx.contracts, p, targetAddress)){
       console.log(`Target address ${targetAddress} is already transfer proxy for ${patp}.`);
       continue;
     }
