@@ -2,12 +2,14 @@
   description = "Command line interface to Azimuth, the Urbit public key infrastructure";
 
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
+  inputs.nixpkgs2505.url = "nixpkgs/nixos-25.05";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, nixpkgs2505, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        pkgs2505 = import nixpkgs2505 { inherit system; };
         node2nixOutput = import ./default.nix { inherit pkgs system; };
 
         # The Azimuth smart contracts in package azimuth-solidity need a specific version
@@ -20,6 +22,7 @@
         # https://github.com/NixOS/nixpkgs/tree/5095e9e32eacfcc794227bfe4fd45d5e60285f73/pkgs/development/compilers/solc
         solc_0_4_24 = pkgs.callPackage ./solc_0_4_24 {
           boost = pkgs.boost177;
+          cmake = pkgs2505.cmake;
         };
 
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
