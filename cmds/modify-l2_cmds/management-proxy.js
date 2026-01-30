@@ -47,7 +47,11 @@ exports.handler = async function (argv)
       continue;
     }
 
-    if(!(await rollerApi.isOwner(rollerClient, patp, signingAddress))) {
+    if(!(
+	    (await rollerApi.isOwner(rollerClient, patp, signingAddress))
+	    ||
+	    (await rollerApi.isManagementProxy(rollerClient, patp, signingAddress))
+    )) {
       console.log(`Cannot set mgmt. proxy for ${patp}, must be owner.`);
       continue;
     }
