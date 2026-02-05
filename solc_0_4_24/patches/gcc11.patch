@@ -1,0 +1,121 @@
+commit 0480ca819c7df756c4f25131881662544f317590
+Author: Chris Kerr <ckerr@chorus.one>
+Date:   Tue Feb 20 18:35:06 2024 +0200
+
+    Compatibility with GCC 11
+    
+    Use a const reference for the loop variable
+    
+    This change is taken from upstream cae6e7769f3e3b804228061c87bdcaac20a0324e
+    from PR https://github.com/ethereum/solidity/pull/8568 but that commit
+    also changes several other parts of the code so I am isolating this change.
+
+diff --git a/libjulia/optimiser/NameCollector.cpp b/libjulia/optimiser/NameCollector.cpp
+index c0d0b7077..d9aebdd66 100644
+--- a/libjulia/optimiser/NameCollector.cpp
++++ b/libjulia/optimiser/NameCollector.cpp
+@@ -35,9 +35,9 @@ void NameCollector::operator()(VariableDeclaration const& _varDecl)
+ void NameCollector::operator ()(FunctionDefinition const& _funDef)
+ {
+ 	m_names.insert(_funDef.name);
+-	for (auto const arg: _funDef.parameters)
++	for (auto const& arg: _funDef.parameters)
+ 		m_names.insert(arg.name);
+-	for (auto const ret: _funDef.returnVariables)
++	for (auto const& ret: _funDef.returnVariables)
+ 		m_names.insert(ret.name);
+ 	ASTWalker::operator ()(_funDef);
+ }
+
+commit b77a8e849fc7a376fc414931363426836f265ecc
+Author: Mathias Baumann <marenz@supradigital.org>
+Date:   Mon May 11 14:59:06 2020 +0200
+
+    Fix clang v10 compilation errors
+    
+    (cherry picked from commit fe431320033d341c782297f38e5e1fb42c791ead)
+    
+    Extended the same changes to cover test/libsolidity/SolidityExpressionCompiler.cpp
+    where the failing line had been removed upstream before the
+    cherry-picked commit.
+
+diff --git a/libsolidity/analysis/GlobalContext.cpp b/libsolidity/analysis/GlobalContext.cpp
+index 756bb540a..dd01bfc60 100644
+--- a/libsolidity/analysis/GlobalContext.cpp
++++ b/libsolidity/analysis/GlobalContext.cpp
+@@ -74,7 +74,7 @@ vector<Declaration const*> GlobalContext::declarations() const
+ {
+ 	vector<Declaration const*> declarations;
+ 	declarations.reserve(m_magicVariables.size());
+-	for (ASTPointer<Declaration const> const& variable: m_magicVariables)
++	for (ASTPointer<MagicVariableDeclaration const> const& variable: m_magicVariables)
+ 		declarations.push_back(variable.get());
+ 	return declarations;
+ }
+diff --git a/libsolidity/codegen/ContractCompiler.cpp b/libsolidity/codegen/ContractCompiler.cpp
+index 0889ac7ce..24580ac37 100644
+--- a/libsolidity/codegen/ContractCompiler.cpp
++++ b/libsolidity/codegen/ContractCompiler.cpp
+@@ -433,13 +433,13 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
+ 	if (!_function.isConstructor())
+ 		// adding 1 for return address.
+ 		m_context.adjustStackOffset(parametersSize + 1);
+-	for (ASTPointer<VariableDeclaration const> const& variable: _function.parameters())
++	for (ASTPointer<VariableDeclaration> const& variable: _function.parameters())
+ 	{
+ 		m_context.addVariable(*variable, parametersSize);
+ 		parametersSize -= variable->annotation().type->sizeOnStack();
+ 	}
+ 
+-	for (ASTPointer<VariableDeclaration const> const& variable: _function.returnParameters())
++	for (ASTPointer<VariableDeclaration> const& variable: _function.returnParameters())
+ 		appendStackVariableInitialisation(*variable);
+ 	for (VariableDeclaration const* localVariable: _function.localVariables())
+ 		appendStackVariableInitialisation(*localVariable);
+@@ -495,7 +495,7 @@ bool ContractCompiler::visit(FunctionDefinition const& _function)
+ 		}
+ 	//@todo assert that everything is in place now
+ 
+-	for (ASTPointer<VariableDeclaration const> const& variable: _function.parameters() + _function.returnParameters())
++	for (ASTPointer<VariableDeclaration> const& variable: _function.parameters() + _function.returnParameters())
+ 		m_context.removeVariable(*variable);
+ 	for (VariableDeclaration const* localVariable: _function.localVariables())
+ 		m_context.removeVariable(*localVariable);
+diff --git a/test/libsolidity/SolidityExpressionCompiler.cpp b/test/libsolidity/SolidityExpressionCompiler.cpp
+index 90d8265c6..59ac16284 100644
+--- a/test/libsolidity/SolidityExpressionCompiler.cpp
++++ b/test/libsolidity/SolidityExpressionCompiler.cpp
+@@ -112,7 +112,7 @@ bytes compileFirstExpression(
+ 
+ 	vector<Declaration const*> declarations;
+ 	declarations.reserve(_globalDeclarations.size() + 1);
+-	for (ASTPointer<Declaration const> const& variable: _globalDeclarations)
++	for (ASTPointer<MagicVariableDeclaration const> const& variable: _globalDeclarations)
+ 		declarations.push_back(variable.get());
+ 
+ 	ErrorList errors;
+
+commit 94c898602ab0910be7690bc6b0e988a038ea1aa1
+Author: Peter Lemenkov <lemenkov@gmail.com>
+Date:   Fri Jul 1 12:09:08 2022 +0200
+
+    Initialize vars before use
+    
+    Signed-off-by: Peter Lemenkov <lemenkov@gmail.com>
+    (cherry picked from commit 93c8120a249a7359f861618593d83310ae2d268b)
+
+diff --git a/libsolidity/parsing/Scanner.cpp b/libsolidity/parsing/Scanner.cpp
+index 6541f6c2f..7970c34e1 100644
+--- a/libsolidity/parsing/Scanner.cpp
++++ b/libsolidity/parsing/Scanner.cpp
+@@ -427,8 +427,8 @@ void Scanner::scanToken()
+ 
+ 	Token::Value token;
+ 	// M and N are for the purposes of grabbing different type sizes
+-	unsigned m;
+-	unsigned n;
++	unsigned m = 0;
++	unsigned n = 0;
+ 	do
+ 	{
+ 		// Remember the position of the next token

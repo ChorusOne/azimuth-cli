@@ -1,0 +1,32 @@
+commit 3abd5f64bdddec17d6ead9233f9a1e4a5d7a56ab
+Author: Chris Kerr <ckerr@chorus.one>
+Date:   Tue Feb 20 16:38:18 2024 +0200
+
+    Patch LLL parser for Boost 1.77
+    
+    The LLL parser was deleted upstream before the Boost changes, so there
+    are no patches for this build error in the upstream repo.
+
+diff --git a/liblll/Parser.cpp b/liblll/Parser.cpp
+index a3962df46..49542deb6 100644
+--- a/liblll/Parser.cpp
++++ b/liblll/Parser.cpp
+@@ -30,6 +30,7 @@
+ #include <boost/spirit/include/qi.hpp>
+ #include <boost/spirit/include/phoenix.hpp>
+ #include <boost/spirit/include/support_utree.hpp>
++#include <boost/spirit/include/support_string_traits.hpp>
+ 
+ using namespace std;
+ using namespace dev;
+@@ -67,8 +68,8 @@ void dev::eth::debugOutAST(ostream& _out, sp::utree const& _this)
+ 
+ 		break;
+ 	case sp::utree_type::int_type: _out << _this.get<int>(); break;
+-	case sp::utree_type::string_type: _out << "\"" << _this.get<sp::basic_string<boost::iterator_range<char const*>, sp::utree_type::string_type>>() << "\""; break;
+-	case sp::utree_type::symbol_type: _out << _this.get<sp::basic_string<boost::iterator_range<char const*>, sp::utree_type::symbol_type>>(); break;
++	case sp::utree_type::string_type: _out << "\"" << sp::traits::get_c_string(_this.get<sp::basic_string<boost::iterator_range<char const*>, sp::utree_type::string_type>>()) << "\""; break;
++	case sp::utree_type::symbol_type: _out << sp::traits::get_c_string(_this.get<sp::basic_string<boost::iterator_range<char const*>, sp::utree_type::symbol_type>>()); break;
+ 	case sp::utree_type::any_type: _out << *_this.get<bigint*>(); break;
+ 	default: _out << "nil";
+ 	}

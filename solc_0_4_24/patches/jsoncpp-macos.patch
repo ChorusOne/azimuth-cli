@@ -1,0 +1,372 @@
+commit 7db058074b97bdc6a36e372f8708d3adee62991c
+Author: Paweł Bylica <chfast@gmail.com>
+Date:   Thu May 17 14:42:22 2018 +0200
+
+    CMake: Fix libdir for jsoncpp external project in special case
+    
+    When building on Debian/Ubuntu with install prefix /usr (e.g. in PPA builds) the CMAKE_INSTALL_LIBDIR is resolved to lib/x86_64-linux-gnu. For jsoncpp external project this is never the case because the install prefix is not /usr. Remove multiarch part from libdir if there.
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index 3d6b37edf..cc2da7e7e 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -7,8 +7,14 @@ else()
+ endif()
+ 
+ include(GNUInstallDirs)
++set(libdir ${CMAKE_INSTALL_LIBDIR})
++if(CMAKE_LIBRARY_ARCHITECTURE)
++    # Do not use Debian multiarch library dir.
++    string(REPLACE "/${CMAKE_LIBRARY_ARCHITECTURE}" "" libdir ${libdir})
++endif()
++
+ set(prefix "${CMAKE_BINARY_DIR}/deps")
+-set(JSONCPP_LIBRARY "${prefix}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}jsoncpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
++set(JSONCPP_LIBRARY "${prefix}/${libdir}/${CMAKE_STATIC_LIBRARY_PREFIX}jsoncpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
+ set(JSONCPP_INCLUDE_DIR "${prefix}/include")
+ 
+ if(NOT MSVC)
+commit a104e5fb03650042ba106c7334c02cbe0110bd91
+Author: mingchuan <mingc@skymizer.com>
+Date:   Wed Jun 6 14:03:07 2018 +0800
+
+    Fix cmake when custom CMAKE_INSTALL_LIBDIR is given
+    
+    According to cmake documents, we cannot assume CMAKE_INSTALL_LIBDIR is a
+    relative path. This commit fixes the "no rule to make libjsoncpp.a"
+    error by passing -DCMAKE_INSTALL_LIBDIR=lib to jsoncpp external project.
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index cc2da7e7e..0c110b532 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -6,15 +6,8 @@ else()
+     set(JSONCPP_CMAKE_COMMAND ${CMAKE_COMMAND})
+ endif()
+ 
+-include(GNUInstallDirs)
+-set(libdir ${CMAKE_INSTALL_LIBDIR})
+-if(CMAKE_LIBRARY_ARCHITECTURE)
+-    # Do not use Debian multiarch library dir.
+-    string(REPLACE "/${CMAKE_LIBRARY_ARCHITECTURE}" "" libdir ${libdir})
+-endif()
+-
+ set(prefix "${CMAKE_BINARY_DIR}/deps")
+-set(JSONCPP_LIBRARY "${prefix}/${libdir}/${CMAKE_STATIC_LIBRARY_PREFIX}jsoncpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
++set(JSONCPP_LIBRARY "${prefix}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}jsoncpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
+ set(JSONCPP_INCLUDE_DIR "${prefix}/include")
+ 
+ if(NOT MSVC)
+@@ -36,6 +29,7 @@ ExternalProject_Add(jsoncpp-project
+     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
++               -DCMAKE_INSTALL_LIBDIR=lib
+                # Build static lib but suitable to be included in a shared lib.
+                -DCMAKE_POSITION_INDEPENDENT_CODE=${BUILD_SHARED_LIBS}
+                -DJSONCPP_WITH_TESTS=OFF
+commit 230317e9ff97ba3b110a95bd22c2656b42fc70b6
+Author: Christian Parpart <christian@parpart.family>
+Date:   Tue Jul 10 15:12:32 2018 +0200
+
+    Visual Studio 2017 build-time (linking) fix and improvements
+
+diff --git a/.gitignore b/.gitignore
+index 14c227d05..87a3e5933 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -35,6 +35,7 @@ build/
+ docs/_build
+ docs/utils/__pycache__
+ docs/utils/*.pyc
++/deps/downloads/
+ 
+ # vim stuff
+ *.swp
+@@ -43,3 +44,5 @@ docs/utils/*.pyc
+ .idea
+ browse.VC.db
+ CMakeLists.txt.user
++/CMakeSettings.json
++/.vs
+diff --git a/cmake/EthCompilerSettings.cmake b/cmake/EthCompilerSettings.cmake
+index 683d1d2e6..3ae5bf2ab 100644
+--- a/cmake/EthCompilerSettings.cmake
++++ b/cmake/EthCompilerSettings.cmake
+@@ -132,17 +132,6 @@ elseif (DEFINED MSVC)
+ 	add_compile_options(-D_WIN32_WINNT=0x0600)		# declare Windows Vista API requirement
+ 	add_compile_options(-DNOMINMAX)					# undefine windows.h MAX && MIN macros cause it cause conflicts with std::min && std::max functions
+ 
+-	# Always use Release variant of C++ runtime.
+-	# We don't want to provide Debug variants of all dependencies. Some default
+-	# flags set by CMake must be tweaked.
+-	string(REPLACE "/MDd" "/MD" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+-	string(REPLACE "/D_DEBUG" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+-	string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+-	string(REPLACE "/MDd" "/MD" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+-	string(REPLACE "/D_DEBUG" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+-	string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+-	set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS OFF)
+-
+ 	# disable empty object file warning
+ 	set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4221")
+ 	# warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index 0c110b532..e886c6092 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -35,9 +35,7 @@ ExternalProject_Add(jsoncpp-project
+                -DJSONCPP_WITH_TESTS=OFF
+                -DJSONCPP_WITH_PKGCONFIG_SUPPORT=OFF
+                -DCMAKE_CXX_FLAGS=${JSONCPP_EXTRA_FLAGS}
+-    # Overwrite build and install commands to force Release build on MSVC.
+-    BUILD_COMMAND cmake --build <BINARY_DIR> --config Release
+-    INSTALL_COMMAND cmake --build <BINARY_DIR> --config Release --target install
++               -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+     ${byproducts}
+ )
+ 
+commit 096cac5e6538bb85c3c51fca013ef4bb2cbcf974
+Author: Guido Vranken <guidovranken@gmail.com>
+Date:   Thu Jul 19 00:05:45 2018 +0200
+
+    Propagate original CMAKE_CXX_FLAGS to jsoncpp compilation
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index e886c6092..a6ca0e7fa 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -34,7 +34,7 @@ ExternalProject_Add(jsoncpp-project
+                -DCMAKE_POSITION_INDEPENDENT_CODE=${BUILD_SHARED_LIBS}
+                -DJSONCPP_WITH_TESTS=OFF
+                -DJSONCPP_WITH_PKGCONFIG_SUPPORT=OFF
+-               -DCMAKE_CXX_FLAGS=${JSONCPP_EXTRA_FLAGS}
++               -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} ${JSONCPP_EXTRA_FLAGS}
+                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+     ${byproducts}
+ )
+commit fb0e3b25d00320fd49817ff807a9bfaf1fe16062
+Author: Daniel Kirchner <daniel@ekpyron.org>
+Date:   Fri Aug 3 16:50:08 2018 +0200
+
+    Rename JSONCPP_EXTRA_FLAGS to JSONCPP_CXX_FLAGS, add EMSCRIPTEN workaround and remove obsolete MSVC workaround.
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index a6ca0e7fa..ea3218efc 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -10,8 +10,16 @@ set(prefix "${CMAKE_BINARY_DIR}/deps")
+ set(JSONCPP_LIBRARY "${prefix}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}jsoncpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
+ set(JSONCPP_INCLUDE_DIR "${prefix}/include")
+ 
+-if(NOT MSVC)
+-    set(JSONCPP_EXTRA_FLAGS "-std=c++11")
++# TODO: Investigate why this breaks some emscripten builds and
++# check whether this can be removed after updating the emscripten
++# versions used in the CI runs.
++if(EMSCRIPTEN)
++    # Do not include all flags in CMAKE_CXX_FLAGS for emscripten,
++    # but only use -std=c++11. Using all flags causes build failures
++    # at the moment.
++    set(JSONCPP_CXX_FLAGS -std=c++11)
++else()
++    set(JSONCPP_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+ endif()
+ 
+ set(byproducts "")
+@@ -34,7 +42,7 @@ ExternalProject_Add(jsoncpp-project
+                -DCMAKE_POSITION_INDEPENDENT_CODE=${BUILD_SHARED_LIBS}
+                -DJSONCPP_WITH_TESTS=OFF
+                -DJSONCPP_WITH_PKGCONFIG_SUPPORT=OFF
+-               -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} ${JSONCPP_EXTRA_FLAGS}
++               -DCMAKE_CXX_FLAGS=${JSONCPP_CXX_FLAGS}
+                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+     ${byproducts}
+ )
+commit 4c382609cc34c54cac8ca85361d94574619899c9
+Author: Christian Parpart <christian@ethereum.org>
+Date:   Wed Dec 19 17:28:05 2018 +0100
+
+    cmake: Do not depend on a C compiler to be present by explicitly stating that this is a C++ project.
+    
+    CMake defaults to C *and* C++ toolchain, in case nothing has been specified.
+    This means that cmake always checks for both, which is more than needed.
+    
+    This PR cuts off C toolchain requirement from /CMakeLists.txt and ensures that we
+    don't pass along any `..._C_...` variables in EthCompilerSettings.cake nor jsoncpp.cmake.
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8893648e4..783530352 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -9,7 +9,7 @@ eth_policy()
+ 
+ # project name and version should be set after cmake_policy CMP0048
+ set(PROJECT_VERSION "0.4.24")
+-project(solidity VERSION ${PROJECT_VERSION})
++project(solidity VERSION ${PROJECT_VERSION} LANGUAGES CXX)
+ 
+ option(SOLC_LINK_STATIC "Link solc executable statically on supported platforms" OFF)
+ option(LLLC_LINK_STATIC "Link lllc executable statically on supported platforms" OFF)
+diff --git a/cmake/EthCompilerSettings.cmake b/cmake/EthCompilerSettings.cmake
+index 518a70de2..9ed5bf75b 100644
+--- a/cmake/EthCompilerSettings.cmake
++++ b/cmake/EthCompilerSettings.cmake
+@@ -169,9 +169,8 @@ endif ()
+ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
+ 	option(USE_LD_GOLD "Use GNU gold linker" ON)
+ 	if (USE_LD_GOLD)
+-		execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
++		execute_process(COMMAND ${CMAKE_CXX_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
+ 		if ("${LD_VERSION}" MATCHES "GNU gold")
+-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fuse-ld=gold")
+ 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fuse-ld=gold")
+ 		endif ()
+ 	endif ()
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index ea3218efc..4b796d71b 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -35,7 +35,6 @@ ExternalProject_Add(jsoncpp-project
+     URL_HASH SHA256=c49deac9e0933bcb7044f08516861a2d560988540b23de2ac1ad443b219afdb6
+     CMAKE_COMMAND ${JSONCPP_CMAKE_COMMAND}
+     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+-               -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                -DCMAKE_INSTALL_LIBDIR=lib
+                # Build static lib but suitable to be included in a shared lib.
+commit ffbf7e6c7aa47a6f03a2df69838fd4d87511fd91
+Author: Bhargava Shastry <bhargava.shastry@ethereum.org>
+Date:   Thu Aug 15 15:41:40 2019 +0200
+
+    jsoncpp: force explicit casts for integer to floating point conversions
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index 48cec7318..3e72a8be2 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -19,7 +19,14 @@ if(EMSCRIPTEN)
+     # at the moment.
+     set(JSONCPP_CXX_FLAGS -std=c++17)
+ else()
+-    set(JSONCPP_CXX_FLAGS ${CMAKE_CXX_FLAGS})
++    # jsoncpp uses implicit casts for comparing integer and
++    # floating point numbers. This causes clang-10 (used by ossfuzz builder)
++    # to error on the implicit conversions. Here, we request jsoncpp
++    # to unconditionally use static casts for these conversions by defining the
++    # JSON_USE_INT64_DOUBLE_CONVERSION preprocessor macro. Doing so,
++    # not only gets rid of the implicit conversion error that clang-10 produces
++    # but also forces safer behavior in general.
++    set(JSONCPP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJSON_USE_INT64_DOUBLE_CONVERSION")
+ endif()
+ 
+ set(byproducts "")
+commit 4edab3d76d72381abeb4ce7089bb02df9ae9fb33
+Author: Alex Beregszaszi <alex@rtfs.hu>
+Date:   Wed Nov 27 23:40:19 2019 +0100
+
+    Update to jsoncpp 1.9.2
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index 3e72a8be2..1377041b9 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -37,9 +37,9 @@ endif()
+ ExternalProject_Add(jsoncpp-project
+     PREFIX "${prefix}"
+     DOWNLOAD_DIR "${CMAKE_SOURCE_DIR}/deps/downloads"
+-    DOWNLOAD_NAME jsoncpp-1.8.4.tar.gz
+-    URL https://github.com/open-source-parsers/jsoncpp/archive/1.8.4.tar.gz
+-    URL_HASH SHA256=c49deac9e0933bcb7044f08516861a2d560988540b23de2ac1ad443b219afdb6
++    DOWNLOAD_NAME jsoncpp-1.9.2.tar.gz
++    URL https://github.com/open-source-parsers/jsoncpp/archive/1.9.2.tar.gz
++    URL_HASH SHA256=77a402fb577b2e0e5d0bdc1cf9c65278915cdb25171e3452c68b6da8a561f8f0
+     CMAKE_COMMAND ${JSONCPP_CMAKE_COMMAND}
+     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+diff --git a/libdevcore/JSON.cpp b/libdevcore/JSON.cpp
+index 0b08616da..80c116bbe 100644
+--- a/libdevcore/JSON.cpp
++++ b/libdevcore/JSON.cpp
+@@ -32,8 +32,8 @@
+ using namespace std;
+ 
+ static_assert(
+-	(JSONCPP_VERSION_MAJOR == 1) && (JSONCPP_VERSION_MINOR == 8) && (JSONCPP_VERSION_PATCH == 4),
+-	"Unexpected jsoncpp version: " JSONCPP_VERSION_STRING ". Expecting 1.8.4."
++	(JSONCPP_VERSION_MAJOR == 1) && (JSONCPP_VERSION_MINOR == 9) && (JSONCPP_VERSION_PATCH == 2),
++	"Unexpected jsoncpp version: " JSONCPP_VERSION_STRING ". Expecting 1.9.2."
+ );
+ 
+ namespace dev
+commit f29780047662b3a67065bf4f81c19e2e2ccb8592
+Author: Daniel Kirchner <daniel@ekpyron.org>
+Date:   Fri Jul 10 19:42:24 2020 +0200
+
+    Upgrade json-cpp to 1.9.3.
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index 46d1f2c8e..5db538a6d 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -37,15 +37,16 @@ endif()
+ ExternalProject_Add(jsoncpp-project
+     PREFIX "${prefix}"
+     DOWNLOAD_DIR "${CMAKE_SOURCE_DIR}/deps/downloads"
+-    DOWNLOAD_NAME jsoncpp-1.9.2.tar.gz
+-    URL https://github.com/open-source-parsers/jsoncpp/archive/1.9.2.tar.gz
+-    URL_HASH SHA256=77a402fb577b2e0e5d0bdc1cf9c65278915cdb25171e3452c68b6da8a561f8f0
++    DOWNLOAD_NAME jsoncpp-1.9.3.tar.gz
++    URL https://github.com/open-source-parsers/jsoncpp/archive/1.9.3.tar.gz
++    URL_HASH SHA256=8593c1d69e703563d94d8c12244e2e18893eeb9a8a9f8aa3d09a327aa45c8f7d
+     CMAKE_COMMAND ${JSONCPP_CMAKE_COMMAND}
+     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                -DCMAKE_INSTALL_LIBDIR=lib
+                # Build static lib but suitable to be included in a shared lib.
+                -DCMAKE_POSITION_INDEPENDENT_CODE=${BUILD_SHARED_LIBS}
++               -DJSONCPP_WITH_EXAMPLE=OFF
+                -DJSONCPP_WITH_TESTS=OFF
+                -DJSONCPP_WITH_PKGCONFIG_SUPPORT=OFF
+                -DCMAKE_CXX_FLAGS=${JSONCPP_CXX_FLAGS}
+diff --git a/libdevcore/JSON.cpp b/libdevcore/JSON.cpp
+index 28b80af98..ddcbe1f65 100644
+--- a/libdevcore/JSON.cpp
++++ b/libdevcore/JSON.cpp
+@@ -28,8 +28,8 @@
+ using namespace std;
+ 
+ static_assert(
+-	(JSONCPP_VERSION_MAJOR == 1) && (JSONCPP_VERSION_MINOR == 9) && (JSONCPP_VERSION_PATCH == 2),
+-	"Unexpected jsoncpp version: " JSONCPP_VERSION_STRING ". Expecting 1.9.2."
++	(JSONCPP_VERSION_MAJOR == 1) && (JSONCPP_VERSION_MINOR == 9) && (JSONCPP_VERSION_PATCH == 3),
++	"Unexpected jsoncpp version: " JSONCPP_VERSION_STRING ". Expecting 1.9.3."
+ );
+ 
+ namespace dev
+commit b07e328c1ba08c9ea09fa36ddc757cb6f8086194
+Author: Alexander Arlt <alexander.arlt@arlt-labs.com>
+Date:   Mon Dec 11 15:52:47 2023 +0100
+
+    Add support for apple silicon.
+
+diff --git a/cmake/jsoncpp.cmake b/cmake/jsoncpp.cmake
+index 5db538a6d..4ba3aed7e 100644
+--- a/cmake/jsoncpp.cmake
++++ b/cmake/jsoncpp.cmake
+@@ -34,6 +34,7 @@ if(CMAKE_VERSION VERSION_GREATER 3.1)
+     set(byproducts BUILD_BYPRODUCTS "${JSONCPP_LIBRARY}")
+ endif()
+ 
++string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_ "${CMAKE_OSX_ARCHITECTURES}")
+ ExternalProject_Add(jsoncpp-project
+     PREFIX "${prefix}"
+     DOWNLOAD_DIR "${CMAKE_SOURCE_DIR}/deps/downloads"
+@@ -51,6 +52,7 @@ ExternalProject_Add(jsoncpp-project
+                -DJSONCPP_WITH_PKGCONFIG_SUPPORT=OFF
+                -DCMAKE_CXX_FLAGS=${JSONCPP_CXX_FLAGS}
+                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
++               -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_}
+     ${byproducts}
+ )
+ 
