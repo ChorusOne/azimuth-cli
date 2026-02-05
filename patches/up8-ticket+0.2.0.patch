@@ -1,0 +1,15 @@
+diff --git a/node_modules/up8-ticket/src/index.js b/node_modules/up8-ticket/src/index.js
+index cdd9e92..b81ed61 100644
+--- a/node_modules/up8-ticket/src/index.js
++++ b/node_modules/up8-ticket/src/index.js
+@@ -7,6 +7,10 @@ const ob = require('urbit-ob')
+ const secrets = require('secrets.js-grempe')
+ const zipWith = require('lodash.zipwith')
+ 
++// Polyfill for Node.js compatibility
++const crypto = require('crypto')
++crypto.rng = crypto.randomBytes
++
+ const GALOIS_BITSIZE = 8
+ 
+ /*

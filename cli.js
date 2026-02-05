@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+// Polyfill for up8-ticket compatibility with Node.js crypto module
+// up8-ticket expects crypto.rng() but Node.js provides crypto.randomBytes()
+const crypto = require('crypto');
+crypto.rng = crypto.randomBytes;
+global.crypto = crypto;
+
 const {files} = require('./utils')
 
 require('yargs')
