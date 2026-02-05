@@ -39,7 +39,7 @@ exports.handler = async function (argv)
       continue;
     }
 
-    var res = await ajs.check.canSetManagementProxy(ctx.contracts, p, ethAccount.address);
+    var res = await azimuth.canSetManagementProxy(ctx.contracts, p, ethAccount.address);
     if(!res.result){
       console.log(`Cannot set mgmt. proxy for ${patp}: ${res.reason}`);
       continue;
