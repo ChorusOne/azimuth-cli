@@ -23,6 +23,12 @@ async function isManagementProxy(contracts, point, address)
   return _.includes(managedPoints, point.toString());
 }
 
+async function canSetManagementProxy(contracts, point, address) {
+  // The corresponding function in azimuth-js is buggy; this is a patched replacement
+  // See https://github.com/urbit/azimuth-js/issues/98
+  return ajs.check.checkActivePointManager(contracts, point, address);
+}
+
 async function getDominion(contracts, point)
 {
   //if the ownership or spawn proxy address is set to 0x111...111 on azimuth, then the point is on l2
@@ -42,6 +48,6 @@ async function getDominion(contracts, point)
 module.exports = {
   getChildren,
   isManagementProxy,
+  canSetManagementProxy,
   getDominion
 }
-
