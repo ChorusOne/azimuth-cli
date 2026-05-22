@@ -28,6 +28,7 @@
         node2nixOutputOverride = builtins.mapAttrs (name: value: value.override {
           buildInputs = [
             pkgs.nodePackages.node-gyp-build
+            pkgs.patch-package
             solc_0_4_24
           ];
           preRebuild = ''
